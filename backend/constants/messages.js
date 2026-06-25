@@ -3,6 +3,8 @@ const MESSAGES = {
   NOT_FOUND: "Resource not found.",
   INTERNAL_ERROR: "An unexpected error occurred.",
   ASSESSMENT_CREATED: "Ishihara assessment saved successfully.",
+  ASSESSMENTS_FETCHED: "Ishihara assessments retrieved successfully.",
+  ASSESSMENT_FETCHED: "Ishihara assessment retrieved successfully.",
 };
 
 export default MESSAGES;

@@ -32,6 +32,49 @@ const createIshiharaAssessment = async (req, res, next) => {
   }
 };
 
+const getAllIshiharaAssessments = async (req, res, next) => {
+  try {
+    const assessments = await assessmentService.getAllIshiharaAssessments();
+
+    return apiResponse(res, {
+      success: true,
+      message: MESSAGES.ASSESSMENTS_FETCHED,
+      data: assessments,
+      status: HTTP_STATUS.OK,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const getIshiharaAssessmentById = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const assessment = await assessmentService.getIshiharaAssessmentById(id);
+
+    if (!assessment) {
+      const errorResponse = {
+        success: false,
+        message: MESSAGES.NOT_FOUND,
+        data: null,
+        status: HTTP_STATUS.NOT_FOUND,
+      };
+      return apiResponse(res, errorResponse);
+    }
+
+    return apiResponse(res, {
+      success: true,
+      message: MESSAGES.ASSESSMENT_FETCHED || MESSAGES.ASSESSMENTS_FETCHED,
+      data: assessment,
+      status: HTTP_STATUS.OK,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export default {
   createIshiharaAssessment,
+  getAllIshiharaAssessments,
+  getIshiharaAssessmentById,
 };

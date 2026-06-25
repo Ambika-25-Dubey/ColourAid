@@ -13,6 +13,18 @@ const saveIshiharaAssessment = async ({ sessionId, userName, score, answers, met
   return createdAssessment;
 };
 
+const getAllIshiharaAssessments = async () => {
+  const assessments = await assessmentModel.fetchAllIshiharaAssessments();
+  return assessments;
+};
+
+const getIshiharaAssessmentById = async (id) => {
+  const assessment = await assessmentModel.fetchIshiharaAssessmentById(id);
+  return assessment;
+};
+
 export default {
   saveIshiharaAssessment,
+  getAllIshiharaAssessments,
+  getIshiharaAssessmentById,
 };
