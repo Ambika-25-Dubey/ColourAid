@@ -4,3 +4,11 @@ database/*.db
 
 storage/uploads/*
 !storage/uploads/.gitkeep
+
+storage/original/*
+!storage/original/.gitkeep
+
+storage/processed/*
+!storage/processed/.gitkeep
+
+tmp_upload_test/

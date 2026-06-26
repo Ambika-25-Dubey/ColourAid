@@ -8,6 +8,7 @@ const MESSAGES = {
   ASSESSMENT_DELETED: "Ishihara assessment deleted successfully.",
   ASSESSMENT_NOT_FOUND: "Assessment not found.",
   IMAGE_UPLOADED: "Image uploaded successfully.",
+  IMAGE_PROCESSED: "Image processed successfully.",
   FILE_MISSING: "No file uploaded.",
   INVALID_FILE_TYPE: "Invalid file type.",
   FILE_TOO_LARGE: "File too large.",
