@@ -34,7 +34,8 @@ const createIshiharaAssessment = async (req, res, next) => {
 
 const getAllIshiharaAssessments = async (req, res, next) => {
   try {
-    const assessments = await assessmentService.getAllIshiharaAssessments();
+    const { sessionId } = req.query;
+    const assessments = await assessmentService.getAllIshiharaAssessments(sessionId);
 
     return apiResponse(res, {
       success: true,

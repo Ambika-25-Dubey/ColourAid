@@ -28,12 +28,17 @@ const insertIshiharaAssessment = async ({ session_id, user_name, score, answers,
   };
 };
 
-const fetchAllIshiharaAssessments = async () => {
-  const rows = await db.all(
-    `SELECT id, session_id, user_name, score, answers, metadata, created_at
-     FROM ishihara_assessments
-     ORDER BY created_at DESC;`
-  );
+const fetchAllIshiharaAssessments = async (sessionId) => {
+  let query = `SELECT id, session_id, user_name, score, answers, metadata, created_at
+               FROM ishihara_assessments`;
+  const params = [];
+  if (sessionId) {
+    query += ` WHERE session_id = ?`;
+    params.push(sessionId);
+  }
+  query += ` ORDER BY created_at DESC;`;
+
+  const rows = await db.all(query, ...params);
 
   return rows.map((row) => ({
     id: row.id,

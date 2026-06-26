@@ -24,8 +24,8 @@ const saveFarnsworthAssessment = async ({ sessionId, userName, userOrder, metada
   return createdAssessment;
 };
 
-const getAllFarnsworthAssessments = async () => {
-  const assessments = await farnsworthModel.fetchAllFarnsworthAssessments();
+const getAllFarnsworthAssessments = async (sessionId) => {
+  const assessments = await farnsworthModel.fetchAllFarnsworthAssessments(sessionId);
   return assessments;
 };
 

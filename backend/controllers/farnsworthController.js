@@ -33,7 +33,8 @@ const createFarnsworthAssessment = async (req, res, next) => {
 
 const getAllFarnsworthAssessments = async (req, res, next) => {
   try {
-    const assessments = await farnsworthAnalysisService.getAllFarnsworthAssessments();
+    const { sessionId } = req.query;
+    const assessments = await farnsworthAnalysisService.getAllFarnsworthAssessments(sessionId);
     return apiResponse(res, {
       success: true,
       message: MESSAGES.FARNSWORTH_ASSESSMENTS_FETCHED,

@@ -6,6 +6,7 @@ import daltonizationService from "../services/daltonizationService.js";
 const processImage = async (req, res, next) => {
   try {
     const file = req.file;
+    const { type, action } = req.body;
 
     if (!file) {
       return apiResponse(res, {
@@ -16,7 +17,7 @@ const processImage = async (req, res, next) => {
       });
     }
 
-    const result = await daltonizationService.processProtanopia(file);
+    const result = await daltonizationService.processImage(file, type, action);
 
     return apiResponse(res, {
       success: true,

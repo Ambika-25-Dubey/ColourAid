@@ -111,7 +111,32 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    const finishIshiharaScreening = () => {
+    const saveAndLoadIshihara = async () => {
+        const sessionId = ensureSessionId();
+        const answersArray = [
+            ishiharaAnswers.plate1 || 'none',
+            ishiharaAnswers.plate2 || 'none',
+            ishiharaAnswers.plate3 || 'none'
+        ];
+        
+        await persistIshiharaAssessment({
+            sessionId,
+            userName: localStorage.getItem('colouraid_user_name') || null,
+            score: ishiharaScore,
+            answers: answersArray,
+            metadata: {
+                savedAt: new Date().toISOString(),
+            }
+        });
+        
+        const savedIshihara = await loadSavedIshiharaAssessments();
+        renderSavedIshiharaAssessments(savedIshihara);
+    };
+
+    const finishIshiharaScreening = async () => {
+        // Save the Ishihara screening results to the backend
+        await saveAndLoadIshihara();
+
         // If they get everything correct, they pass the screening
         if (ishiharaScore === ishiharaPlates.length) {
             showFinalResults(
@@ -309,7 +334,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const loadSavedAssessments = async () => {
         try {
-            const response = await fetch('/api/v1/assessments/farnsworth');
+            const sessionId = ensureSessionId();
+            const response = await fetch(`/api/v1/assessments/farnsworth?sessionId=${encodeURIComponent(sessionId)}`);
             const result = await response.json();
             if (!response.ok) {
                 console.warn('Failed to load saved assessments', result);
@@ -361,6 +387,76 @@ document.addEventListener('DOMContentLoaded', () => {
         }).join('');
     };
 
+    const persistIshiharaAssessment = async (assessmentPayload) => {
+        try {
+            const response = await fetch('/api/v1/assessments/ishihara', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(assessmentPayload),
+            });
+
+            const result = await response.json();
+            if (!response.ok) {
+                console.warn('Failed to save Ishihara assessment', result);
+                return null;
+            }
+
+            return result.data;
+        } catch (error) {
+            console.error('Unable to save Ishihara assessment', error);
+            return null;
+        }
+    };
+
+    const loadSavedIshiharaAssessments = async () => {
+        try {
+            const sessionId = ensureSessionId();
+            const response = await fetch(`/api/v1/assessments/ishihara?sessionId=${encodeURIComponent(sessionId)}`);
+            const result = await response.json();
+            if (!response.ok) {
+                console.warn('Failed to load saved Ishihara assessments', result);
+                return [];
+            }
+            return result.data || [];
+        } catch (error) {
+            console.error('Unable to load saved Ishihara assessments', error);
+            return [];
+        }
+    };
+
+    const renderSavedIshiharaAssessments = (assessments) => {
+        const container = document.getElementById('saved-ishihara-container');
+        const list = document.getElementById('saved-ishihara-list');
+        const empty = document.getElementById('saved-ishihara-empty');
+
+        if (!assessments || assessments.length === 0) {
+            list.innerHTML = '';
+            empty.classList.remove('hidden');
+            container.classList.remove('hidden');
+            return;
+        }
+
+        empty.classList.add('hidden');
+        container.classList.remove('hidden');
+
+        list.innerHTML = assessments.map((assessment) => {
+            const date = new Date(assessment.createdAt).toLocaleString();
+            const passStatus = assessment.score === 3 ? "Passed" : "Failed";
+            const statusColor = assessment.score === 3 ? "rgba(16, 185, 129, 0.85)" : "rgba(239, 68, 68, 0.85)";
+            return `
+                <div class="assessment-history-card" style="padding: 1rem; border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; background: rgba(255,255,255,0.02);">
+                    <div style="display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
+                        <strong>Ishihara Screening: <span style="color: ${statusColor};">${passStatus}</span></strong>
+                        <span style="color: var(--text-muted);">${date}</span>
+                    </div>
+                    <p style="margin: 0.5rem 0 0; color: var(--text-muted);">Score: ${assessment.score} / 3 plates correct</p>
+                </div>
+            `;
+        }).join('');
+    };
+
     const ensureSessionId = () => {
         let sessionId = localStorage.getItem('colouraid_session_id');
         if (!sessionId) {
@@ -373,6 +469,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const initializeSavedAssessments = async () => {
         const assessments = await loadSavedAssessments();
         renderSavedAssessments(assessments);
+
+        const ishiharaAssessments = await loadSavedIshiharaAssessments();
+        renderSavedIshiharaAssessments(ishiharaAssessments);
     };
 
     const showFinalResults = async (status, type, severity, desc, d15Order = null) => {
@@ -620,6 +719,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let originalImageData = null;
     let simulatedImageData = null;
     let correctedImageData = null;
+    let serverSimulatedImg = null;
+    let serverCorrectedImg = null;
 
     const checkImageCorrectionLockState = (profile) => {
         if (!profile) {
@@ -689,8 +790,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Reset toggles to Original
                 setActiveView('original');
                 
-                // Pre-calculate other modes to make toggling instant
-                processImageModes();
+                // Reset server cache
+                serverSimulatedImg = null;
+                serverCorrectedImg = null;
+
+                // Process modes via Server-side APIs with Client-side fallback
+                processImageModesOnServer(file);
             };
             img.src = event.target.result;
         };
@@ -734,10 +839,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (viewName === 'original' && originalImageData) {
             ctx.putImageData(originalImageData, 0, 0);
-        } else if (viewName === 'simulated' && simulatedImageData) {
-            ctx.putImageData(simulatedImageData, 0, 0);
-        } else if (viewName === 'corrected' && correctedImageData) {
-            ctx.putImageData(correctedImageData, 0, 0);
+        } else if (viewName === 'simulated') {
+            if (serverSimulatedImg) {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(serverSimulatedImg, 0, 0, canvas.width, canvas.height);
+            } else if (simulatedImageData) {
+                ctx.putImageData(simulatedImageData, 0, 0);
+            }
+        } else if (viewName === 'corrected') {
+            if (serverCorrectedImg) {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(serverCorrectedImg, 0, 0, canvas.width, canvas.height);
+            } else if (correctedImageData) {
+                ctx.putImageData(correctedImageData, 0, 0);
+            }
         }
     };
 
@@ -750,6 +865,8 @@ document.addEventListener('DOMContentLoaded', () => {
         originalImageData = null;
         simulatedImageData = null;
         correctedImageData = null;
+        serverSimulatedImg = null;
+        serverCorrectedImg = null;
         fileInput.value = '';
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         previewContainer.classList.add('hidden');
@@ -757,7 +874,73 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // --- Image Processing Algorithms ---
-    // Full Daltonization Pipeline using LMS cone color space
+    const processImageModesOnServer = async (file) => {
+        processingStatus.textContent = "(Processing on server...)";
+        
+        const profile = JSON.parse(localStorage.getItem('colouraid_profile'));
+        const type = profile ? profile.type : 'protan';
+        
+        try {
+            // Prepare form data for simulation
+            const formDataSim = new FormData();
+            formDataSim.append('image', file);
+            formDataSim.append('type', type);
+            formDataSim.append('action', 'simulate');
+
+            // Prepare form data for correction
+            const formDataCor = new FormData();
+            formDataCor.append('image', file);
+            formDataCor.append('type', type);
+            formDataCor.append('action', 'correct');
+
+            // Send parallel requests to backend
+            const [simRes, corRes] = await Promise.all([
+                fetch('/api/v1/images/process', { method: 'POST', body: formDataSim }),
+                fetch('/api/v1/images/process', { method: 'POST', body: formDataCor })
+            ]);
+
+            if (!simRes.ok || !corRes.ok) {
+                throw new Error("Server-side image processing failed.");
+            }
+
+            const simJSON = await simRes.json();
+            const corJSON = await corRes.json();
+
+            // Preload processed images
+            const preloadImage = (url) => {
+                return new Promise((resolve, reject) => {
+                    const img = new Image();
+                    img.onload = () => resolve(img);
+                    img.onerror = reject;
+                    img.src = url;
+                });
+            };
+
+            const [simImg, corImg] = await Promise.all([
+                preloadImage(simJSON.data.processedImage),
+                preloadImage(corJSON.data.processedImage)
+            ]);
+
+            serverSimulatedImg = simImg;
+            serverCorrectedImg = corImg;
+
+            processingStatus.textContent = "(Server processing complete)";
+            setTimeout(() => { processingStatus.textContent = ''; }, 2000);
+
+            // Switch to corrected view immediately
+            setActiveView('corrected');
+
+        } catch (error) {
+            console.warn("Fallback to client-side processing due to error:", error);
+            processingStatus.textContent = "(Server error. Client fallback...)";
+            setTimeout(() => { processingStatus.textContent = ''; }, 2000);
+            
+            // Fallback to client-side processing
+            processImageModes();
+        }
+    };
+
+    // Full Daltonization Pipeline using LMS cone color space (Client-side fallback)
     const processImageModes = () => {
         processingStatus.textContent = "(Processing image...)";
         

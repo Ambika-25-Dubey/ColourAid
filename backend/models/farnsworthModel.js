@@ -66,12 +66,17 @@ const insertFarnsworthAssessment = async ({ session_id, user_name, total_error, 
   };
 };
 
-const fetchAllFarnsworthAssessments = async () => {
-  const rows = await db.all(
-    `SELECT id, session_id, user_name, total_error, error_margin, crossing_errors, severity, deficiency_type, description, user_order, metadata, created_at
-     FROM farnsworth_assessments
-     ORDER BY created_at DESC;`
-  );
+const fetchAllFarnsworthAssessments = async (sessionId) => {
+  let query = `SELECT id, session_id, user_name, total_error, error_margin, crossing_errors, severity, deficiency_type, description, user_order, metadata, created_at
+               FROM farnsworth_assessments`;
+  const params = [];
+  if (sessionId) {
+    query += ` WHERE session_id = ?`;
+    params.push(sessionId);
+  }
+  query += ` ORDER BY created_at DESC;`;
+
+  const rows = await db.all(query, ...params);
 
   return rows.map((row) => ({
     id: row.id,
