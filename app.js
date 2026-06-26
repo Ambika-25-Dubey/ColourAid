@@ -116,7 +116,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (ishiharaScore === ishiharaPlates.length) {
             showFinalResults(
                 "Normal Color Vision", 
-                "none", 
+                "normal", 
                 0, 
                 "Good work! You passed the screening test perfectly. Your color vision appears to be normal."
             );
@@ -252,22 +252,25 @@ document.addEventListener('DOMContentLoaded', () => {
         let resultName = "Normal Color Vision";
         let resultDesc = "Good work! Your arrangement is completely accurate. Your color vision appears to be perfectly normal.";
         let severity = 0;
-        let detectedType = "none";
+        let detectedType = "normal";
 
         // A margin of <= 2 is often considered a simple transposition (e.g. 1, 3, 2) and is normal.
         if (crossingErrors > 0 || errorMargin > 4) {
             severity = Math.min(100, Math.max(15, (errorMargin / 40) * 100));
             
             if (crossingErrors >= 2) {
-                resultName = "Color Vision Deficiency Detected";
-                resultDesc = "Your arrangement showed major crossing errors, indicating a color vision deficiency.";
-                
                 if (isRedGreenHint) {
-                    resultDesc += " The pattern strongly suggests a Red-Green deficiency (Possible Protan or Deutan).";
-                    detectedType = "protan_deutan";
+                    resultName = "Possible Red-Green Deficiency";
+                    resultDesc = "Your arrangement pattern may indicate a red-green color vision deficiency.";
+                    detectedType = "possible_red_green";
                 } else if (isBlueYellowHint) {
-                    resultDesc += " The pattern suggests a Blue-Yellow deficiency (Possible Tritan).";
-                    detectedType = "tritan";
+                    resultName = "Possible Blue-Yellow Deficiency";
+                    resultDesc = "Your arrangement pattern may indicate a blue-yellow color vision deficiency.";
+                    detectedType = "possible_blue_yellow";
+                } else {
+                    resultName = "Possible Red-Green Deficiency";
+                    resultDesc = "Your arrangement pattern may indicate a red-green color vision deficiency.";
+                    detectedType = "possible_red_green";
                 }
             } else {
                 resultName = "Mild Color Confusion";
@@ -278,10 +281,101 @@ document.addEventListener('DOMContentLoaded', () => {
             resultDesc = "Good work! You had very minor misplacements, but this is within the normal range. Your color vision is normal.";
         }
 
-        showFinalResults(resultName, detectedType, severity, resultDesc, userOrder);
+        void showFinalResults(resultName, detectedType, severity, resultDesc, userOrder);
     });
 
-    const showFinalResults = (status, type, severity, desc, d15Order = null) => {
+    const persistFarnsworthAssessment = async (assessmentPayload) => {
+        try {
+            const response = await fetch('/api/v1/assessments/farnsworth', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(assessmentPayload),
+            });
+
+            const result = await response.json();
+            if (!response.ok) {
+                console.warn('Failed to save D-15 assessment', result);
+                return null;
+            }
+
+            return result.data;
+        } catch (error) {
+            console.error('Unable to save D-15 assessment', error);
+            return null;
+        }
+    };
+
+    const loadSavedAssessments = async () => {
+        try {
+            const response = await fetch('/api/v1/assessments/farnsworth');
+            const result = await response.json();
+            if (!response.ok) {
+                console.warn('Failed to load saved assessments', result);
+                return [];
+            }
+            return result.data || [];
+        } catch (error) {
+            console.error('Unable to load saved assessments', error);
+            return [];
+        }
+    };
+
+    const renderSavedAssessments = (assessments) => {
+        const container = document.getElementById('saved-assessments-container');
+        const list = document.getElementById('saved-assessments-list');
+        const empty = document.getElementById('saved-assessments-empty');
+
+        if (!assessments || assessments.length === 0) {
+            list.innerHTML = '';
+            empty.classList.remove('hidden');
+            container.classList.remove('hidden');
+            return;
+        }
+
+        empty.classList.add('hidden');
+        container.classList.remove('hidden');
+
+        list.innerHTML = assessments.map((assessment) => {
+            const date = new Date(assessment.createdAt).toLocaleString();
+            const normalizedType = assessment.deficiencyType === 'none' ? 'normal' : assessment.deficiencyType;
+            const typeLabel = normalizedType === 'normal'
+                ? 'Normal Color Vision'
+                : normalizedType === 'possible_red_green'
+                ? 'Possible Red-Green Deficiency'
+                : normalizedType === 'possible_blue_yellow'
+                ? 'Possible Blue-Yellow Deficiency'
+                : normalizedType === 'mild'
+                ? 'Mild Color Confusion'
+                : normalizedType.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+            return `
+                <div class="assessment-history-card" style="padding: 1rem; border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; background: rgba(255,255,255,0.02);">
+                    <div style="display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
+                        <strong>${typeLabel}</strong>
+                        <span style="color: var(--text-muted);">${date}</span>
+                    </div>
+                    <p style="margin: 0.5rem 0 0; color: var(--text-muted);">Severity: ${assessment.severity}% · Total error: ${assessment.totalError} · Crossings: ${assessment.crossingErrors}</p>
+                </div>
+            `;
+        }).join('');
+    };
+
+    const ensureSessionId = () => {
+        let sessionId = localStorage.getItem('colouraid_session_id');
+        if (!sessionId) {
+            sessionId = window.crypto?.randomUUID?.() || `session-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+            localStorage.setItem('colouraid_session_id', sessionId);
+        }
+        return sessionId;
+    };
+
+    const initializeSavedAssessments = async () => {
+        const assessments = await loadSavedAssessments();
+        renderSavedAssessments(assessments);
+    };
+
+    const showFinalResults = async (status, type, severity, desc, d15Order = null) => {
         document.getElementById('deficiency-type').textContent = status;
         document.getElementById('deficiency-desc').textContent = desc;
         
@@ -324,6 +418,21 @@ document.addEventListener('DOMContentLoaded', () => {
         };
         localStorage.setItem('colouraid_profile', JSON.stringify(profileData));
         checkUploaderLockState(profileData);
+
+        if (d15Order) {
+            const sessionId = ensureSessionId();
+            await persistFarnsworthAssessment({
+                sessionId,
+                userName: localStorage.getItem('colouraid_user_name') || null,
+                userOrder: d15Order,
+                metadata: {
+                    ishiharaScore,
+                    savedAt: new Date().toISOString(),
+                },
+            });
+            const assessments = await loadSavedAssessments();
+            renderSavedAssessments(assessments);
+        }
 
         showStep(stepResults);
     };
@@ -451,14 +560,17 @@ document.addEventListener('DOMContentLoaded', () => {
         accessLockedState.classList.add('hidden');
         accessActiveState.classList.remove('hidden');
 
-        if (profile.severity < 15 || profile.type === "none") {
+        if (profile.severity < 15 || profile.type === "none" || profile.type === "normal") {
             lockMessage.textContent = "Your color vision is normal! No adaptive theme is strictly necessary.";
             applyTheme('default');
             activeThemeDesc.textContent = "Your vision is normal. The standard theme remains active, but you can manually preview accessibility themes below.";
         } else {
             // Apply deficiency-specific theme
-            const themeToApply = profile.type === "red-green" || profile.type === "protan_deutan" ? "protan_deutan" : 
-                                 profile.type === "blue-yellow" || profile.type === "tritan" ? "tritan" : "default";
+            const themeToApply = profile.type === "possible_red_green" || profile.type === "red-green" || profile.type === "protan_deutan"
+                ? "protan_deutan"
+                : profile.type === "possible_blue_yellow" || profile.type === "blue-yellow" || profile.type === "tritan"
+                ? "tritan"
+                : "default";
             
             applyTheme(themeToApply);
             
@@ -486,6 +598,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initial check on load
     const savedProfile = JSON.parse(localStorage.getItem('colouraid_profile'));
     checkAccessibilityLockState(savedProfile);
+    initializeSavedAssessments();
 
 
     // --- Image Correction Logic ---
@@ -516,7 +629,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        if (profile.severity < 15 || profile.type === "none") {
+        if (profile.severity < 15 || profile.type === "none" || profile.type === "normal") {
             imageLockedState.classList.remove('hidden');
             imageActiveState.classList.add('hidden');
             imageLockMessage.textContent = "Your color vision is normal! Image adjustments are not necessary.";

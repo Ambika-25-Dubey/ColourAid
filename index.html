@@ -98,6 +98,7 @@
                         <div class="result-card" style="margin-top: 1rem;">
                             <h4 id="deficiency-type">Analyzing...</h4>
                             <p id="deficiency-desc">Please complete the test above.</p>
+                            <p style="margin-top: 0.75rem; color: var(--text-muted); font-size: 0.9rem;">This assessment is intended for educational screening purposes only and is not a medical diagnosis.</p>
                             
                             <div id="severity-container" class="hidden">
                                 <p style="font-size: 0.9rem; margin-top: 1rem; color: var(--text-muted);">Estimated Severity</p>
@@ -113,6 +114,12 @@
                             
                             <div class="medical-disclaimer" style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--glass-border); font-size: 0.85rem; color: var(--text-muted);">
                                 <p><strong>Note:</strong> This is a supplementary online tool and not a definitive clinical diagnosis. Please consult with an optometrist or ophthalmologist for professional medical confirmation.</p>
+                            </div>
+
+                            <div id="saved-assessments-container" class="hidden" style="margin-top: 1.5rem;">
+                                <h4>Saved Farnsworth D-15 History</h4>
+                                <div id="saved-assessments-list" class="assessment-history-list" style="display: grid; gap: 0.75rem;"></div>
+                                <p id="saved-assessments-empty" style="color: var(--text-muted); margin-top: 0.75rem;">No saved assessments found yet.</p>
                             </div>
                         </div>
                         <div class="actions center-actions" style="margin-top: 1.5rem;">
