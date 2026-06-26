@@ -1,4 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
+
+    const API_BASE = 'http://localhost:3000';
     // --- Navigation Logic ---
     const navBtns = document.querySelectorAll('.nav-btn');
     const sections = document.querySelectorAll('.section');
@@ -28,7 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const stepIshihara = document.getElementById('step-ishihara');
     const stepD15 = document.getElementById('step-d15');
     const stepResults = document.getElementById('step-results');
-    
+
     const showStep = (stepElement) => {
         [stepStart, stepIshihara, stepD15, stepResults].forEach(el => el.classList.add('hidden'));
         stepElement.classList.remove('hidden');
@@ -62,20 +64,20 @@ document.addEventListener('DOMContentLoaded', () => {
     const loadIshiharaPlate = () => {
         const plate = ishiharaPlates[currentPlateIndex];
         plateNumberEl.textContent = currentPlateIndex + 1;
-        
+
         // Clear previous content
         plateEl.innerHTML = '';
         plateEl.style.background = 'transparent';
-        
+
         const img = document.createElement('img');
         img.src = plate.src;
         img.alt = 'Ishihara Plate';
         img.style.width = '100%';
         img.style.height = '100%';
         img.style.objectFit = 'contain';
-        
+
         plateEl.appendChild(img);
-        
+
         ishiharaInput.value = '';
         ishiharaInput.focus();
     };
@@ -86,7 +88,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (parseInt(value) === expected) {
             ishiharaScore++;
         }
-        
+
         currentPlateIndex++;
         if (currentPlateIndex < ishiharaPlates.length) {
             loadIshiharaPlate();
@@ -104,7 +106,7 @@ document.addEventListener('DOMContentLoaded', () => {
     skipPlateBtn.addEventListener('click', () => {
         processIshiharaAnswer('none');
     });
-    
+
     ishiharaInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter' && ishiharaInput.value.trim() !== '') {
             processIshiharaAnswer(ishiharaInput.value);
@@ -118,7 +120,7 @@ document.addEventListener('DOMContentLoaded', () => {
             ishiharaAnswers.plate2 || 'none',
             ishiharaAnswers.plate3 || 'none'
         ];
-        
+
         await persistIshiharaAssessment({
             sessionId,
             userName: localStorage.getItem('colouraid_user_name') || null,
@@ -128,7 +130,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 savedAt: new Date().toISOString(),
             }
         });
-        
+
         const savedIshihara = await loadSavedIshiharaAssessments();
         renderSavedIshiharaAssessments(savedIshihara);
     };
@@ -140,9 +142,9 @@ document.addEventListener('DOMContentLoaded', () => {
         // If they get everything correct, they pass the screening
         if (ishiharaScore === ishiharaPlates.length) {
             showFinalResults(
-                "Normal Color Vision", 
-                "normal", 
-                0, 
+                "Normal Color Vision",
+                "normal",
+                0,
                 "Good work! You passed the screening test perfectly. Your color vision appears to be normal."
             );
         } else {
@@ -241,7 +243,7 @@ document.addEventListener('DOMContentLoaded', () => {
     evaluateBtn.addEventListener('click', () => {
         const currentCaps = [...sortableCapsContainer.querySelectorAll('.sortable-cap')];
         const userOrder = [0, ...currentCaps.map(c => parseInt(c.dataset.id))]; // 0 is reference
-        
+
         let totalError = 0;
         let crossingErrors = 0;
         let isRedGreenHint = false;
@@ -249,16 +251,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
         for (let i = 0; i < userOrder.length - 1; i++) {
             const current = userOrder[i];
-            const next = userOrder[i+1];
+            const next = userOrder[i + 1];
             const diff = Math.abs(current - next);
-            
+
             totalError += diff;
-            
+
             // In the D-15 test, a true "crossing" error goes across the color circle
             // which translates to a difference of 4 or more between adjacent caps in the ideal sequence.
             if (diff >= 4) {
                 crossingErrors++;
-                
+
                 // Rough axis estimation based on typical crossing pairs
                 // Protan/Deutan (Red-Green) typically cross from ends (1-15, 2-14, 3-13 etc)
                 // Tritan (Blue-Yellow) typically cross middle to ends (7-15, 8-14, etc)
@@ -282,7 +284,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // A margin of <= 2 is often considered a simple transposition (e.g. 1, 3, 2) and is normal.
         if (crossingErrors > 0 || errorMargin > 4) {
             severity = Math.min(100, Math.max(15, (errorMargin / 40) * 100));
-            
+
             if (crossingErrors >= 2) {
                 if (isRedGreenHint) {
                     resultName = "Possible Red-Green Deficiency";
@@ -311,7 +313,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const persistFarnsworthAssessment = async (assessmentPayload) => {
         try {
-            const response = await fetch('/api/v1/assessments/farnsworth', {
+            const response = await fetch(`${API_BASE}/api/v1/assessments/farnsworth`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -335,7 +337,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const loadSavedAssessments = async () => {
         try {
             const sessionId = ensureSessionId();
-            const response = await fetch(`/api/v1/assessments/farnsworth?sessionId=${encodeURIComponent(sessionId)}`);
+            const response = await fetch(`${API_BASE}/api/v1/assessments/farnsworth?sessionId=${encodeURIComponent(sessionId)}`
+            );
             const result = await response.json();
             if (!response.ok) {
                 console.warn('Failed to load saved assessments', result);
@@ -369,12 +372,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const typeLabel = normalizedType === 'normal'
                 ? 'Normal Color Vision'
                 : normalizedType === 'possible_red_green'
-                ? 'Possible Red-Green Deficiency'
-                : normalizedType === 'possible_blue_yellow'
-                ? 'Possible Blue-Yellow Deficiency'
-                : normalizedType === 'mild'
-                ? 'Mild Color Confusion'
-                : normalizedType.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+                    ? 'Possible Red-Green Deficiency'
+                    : normalizedType === 'possible_blue_yellow'
+                        ? 'Possible Blue-Yellow Deficiency'
+                        : normalizedType === 'mild'
+                            ? 'Mild Color Confusion'
+                            : normalizedType.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
             return `
                 <div class="assessment-history-card" style="padding: 1rem; border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; background: rgba(255,255,255,0.02);">
                     <div style="display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
@@ -389,7 +392,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const persistIshiharaAssessment = async (assessmentPayload) => {
         try {
-            const response = await fetch('/api/v1/assessments/ishihara', {
+            const response = await fetch(`${API_BASE}/api/v1/assessments/ishihara`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -413,7 +416,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const loadSavedIshiharaAssessments = async () => {
         try {
             const sessionId = ensureSessionId();
-            const response = await fetch(`/api/v1/assessments/ishihara?sessionId=${encodeURIComponent(sessionId)}`);
+            const response = await fetch(`${API_BASE}/api/v1/assessments/ishihara?sessionId=${encodeURIComponent(sessionId)}`
+            );
             const result = await response.json();
             if (!response.ok) {
                 console.warn('Failed to load saved Ishihara assessments', result);
@@ -477,7 +481,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const showFinalResults = async (status, type, severity, desc, d15Order = null) => {
         document.getElementById('deficiency-type').textContent = status;
         document.getElementById('deficiency-desc').textContent = desc;
-        
+
         const severityContainer = document.getElementById('severity-container');
         if (severity > 0) {
             severityContainer.classList.remove('hidden');
@@ -550,7 +554,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // 0 is reference, 1-15 are the colors. Placed clockwise.
         const totalPoints = 16;
         const points = [];
-        
+
         for (let i = 0; i < totalPoints; i++) {
             // Start Reference Cap (0) at top
             const angle = (i * (2 * Math.PI) / totalPoints) - (Math.PI / 2);
@@ -578,17 +582,17 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.beginPath();
         for (let i = 0; i < userOrder.length - 1; i++) {
             const currentPoint = points[userOrder[i]];
-            const nextPoint = points[userOrder[i+1]];
-            
+            const nextPoint = points[userOrder[i + 1]];
+
             ctx.moveTo(currentPoint.x, currentPoint.y);
             ctx.lineTo(nextPoint.x, nextPoint.y);
-            
+
             // Check if it's a major crossing error to highlight red
-            if (Math.abs(userOrder[i] - userOrder[i+1]) >= 4) {
-               ctx.strokeStyle = 'rgba(239, 68, 68, 0.8)'; // Red
-               ctx.lineWidth = 2;
-               ctx.stroke();
-               ctx.beginPath(); // start new path for next lines
+            if (Math.abs(userOrder[i] - userOrder[i + 1]) >= 4) {
+                ctx.strokeStyle = 'rgba(239, 68, 68, 0.8)'; // Red
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                ctx.beginPath(); // start new path for next lines
             }
         }
         ctx.strokeStyle = 'rgba(99, 102, 241, 0.8)'; // Primary blue
@@ -599,7 +603,7 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.font = '12px Arial';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        
+
         points.forEach((p, idx) => {
             // Circle
             ctx.beginPath();
@@ -609,13 +613,13 @@ document.addEventListener('DOMContentLoaded', () => {
             ctx.strokeStyle = '#fff';
             ctx.lineWidth = 1.5;
             ctx.stroke();
-            
+
             // Label Number (outside)
             const labelRadius = radius + 20;
             const angle = (idx * (2 * Math.PI) / totalPoints) - (Math.PI / 2);
             const labelX = center.x + labelRadius * Math.cos(angle);
             const labelY = center.y + labelRadius * Math.sin(angle);
-            
+
             ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
             ctx.fillText(idx === 0 ? 'R' : idx, labelX, labelY);
         });
@@ -626,7 +630,7 @@ document.addEventListener('DOMContentLoaded', () => {
         checkUploaderLockState(null);
         showStep(stepStart);
         const meterFill = document.getElementById('meter-fill');
-        if(meterFill) meterFill.style.width = '0%';
+        if (meterFill) meterFill.style.width = '0%';
     });
 
     // --- Accessibility Controls Logic ---
@@ -668,13 +672,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const themeToApply = profile.type === "possible_red_green" || profile.type === "red-green" || profile.type === "protan_deutan"
                 ? "protan_deutan"
                 : profile.type === "possible_blue_yellow" || profile.type === "blue-yellow" || profile.type === "tritan"
-                ? "tritan"
-                : "default";
-            
+                    ? "tritan"
+                    : "default";
+
             applyTheme(themeToApply);
-            
-            let descriptiveName = themeToApply === 'protan_deutan' ? 'Red-Green High Contrast' : 
-                                  themeToApply === 'tritan' ? 'Blue-Yellow Isolation' : 'Standard';
+
+            let descriptiveName = themeToApply === 'protan_deutan' ? 'Red-Green High Contrast' :
+                themeToApply === 'tritan' ? 'Blue-Yellow Isolation' : 'Standard';
             activeThemeDesc.textContent = `Based on your assessment, the "${descriptiveName}" adaptive color theme has been automatically applied across the interface.`;
         }
     };
@@ -704,7 +708,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const imageLockedState = document.getElementById('image-locked-state');
     const imageActiveState = document.getElementById('image-active-state');
     const imageLockMessage = document.getElementById('image-lock-message');
-    
+
     const dropZone = document.getElementById('drop-zone');
     const fileInput = document.getElementById('file-input');
     const browseBtn = document.getElementById('browse-btn');
@@ -712,6 +716,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const canvas = document.getElementById('image-canvas');
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
     const clearBtn = document.getElementById('clear-btn');
+    const downloadBtn = document.getElementById('download-btn');
     const viewBtns = document.querySelectorAll('.view-btn');
     const processingStatus = document.getElementById('processing-status');
 
@@ -786,10 +791,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 renderOriginalImage();
                 dropZone.classList.add('hidden');
                 previewContainer.classList.remove('hidden');
-                
+
                 // Reset toggles to Original
                 setActiveView('original');
-                
+
                 // Reset server cache
                 serverSimulatedImg = null;
                 serverCorrectedImg = null;
@@ -816,7 +821,7 @@ document.addEventListener('DOMContentLoaded', () => {
         canvas.height = height;
         ctx.clearRect(0, 0, width, height);
         ctx.drawImage(currentImage, 0, 0, width, height);
-        
+
         // Cache original data
         originalImageData = ctx.getImageData(0, 0, width, height);
         simulatedImageData = null;
@@ -871,15 +876,19 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         previewContainer.classList.add('hidden');
         dropZone.classList.remove('hidden');
+        // Hide and reset the download button
+        downloadBtn.classList.add('hidden');
+        downloadBtn.href = '';
+        downloadBtn.download = '';
     });
 
     // --- Image Processing Algorithms ---
     const processImageModesOnServer = async (file) => {
         processingStatus.textContent = "(Processing on server...)";
-        
+
         const profile = JSON.parse(localStorage.getItem('colouraid_profile'));
         const type = profile ? profile.type : 'protan';
-        
+
         try {
             // Prepare form data for simulation
             const formDataSim = new FormData();
@@ -894,9 +903,17 @@ document.addEventListener('DOMContentLoaded', () => {
             formDataCor.append('action', 'correct');
 
             // Send parallel requests to backend
+            const API_BASE = 'http://localhost:3000';
+
             const [simRes, corRes] = await Promise.all([
-                fetch('/api/v1/images/process', { method: 'POST', body: formDataSim }),
-                fetch('/api/v1/images/process', { method: 'POST', body: formDataCor })
+                fetch(`${API_BASE}/api/v1/images/process`, {
+                    method: 'POST',
+                    body: formDataSim
+                }),
+                fetch(`${API_BASE}/api/v1/images/process`, {
+                    method: 'POST',
+                    body: formDataCor
+                })
             ]);
 
             if (!simRes.ok || !corRes.ok) {
@@ -917,8 +934,8 @@ document.addEventListener('DOMContentLoaded', () => {
             };
 
             const [simImg, corImg] = await Promise.all([
-                preloadImage(simJSON.data.processedImage),
-                preloadImage(corJSON.data.processedImage)
+                preloadImage(`${API_BASE}${simJSON.data.processedImage}`),
+                preloadImage(`${API_BASE}${corJSON.data.processedImage}`)
             ]);
 
             serverSimulatedImg = simImg;
@@ -927,6 +944,44 @@ document.addEventListener('DOMContentLoaded', () => {
             processingStatus.textContent = "(Server processing complete)";
             setTimeout(() => { processingStatus.textContent = ''; }, 2000);
 
+            // Wire up the download button with the corrected image
+            const typeLabels = { protan: 'protanopia', deutan: 'deuteranopia', tritan: 'tritanopia' };
+            const label = typeLabels[type] || type;
+            console.log(
+                "Processed image path:", `${API_BASE}${corJSON.data.processedImage}`);
+
+            downloadBtn.classList.remove('hidden');
+
+            downloadBtn.onclick = async (e) => {
+                e.preventDefault();
+
+                try {
+                    const response = await fetch(
+                        `${API_BASE}${corJSON.data.processedImage}`
+                    );
+
+                    if (!response.ok) {
+                        throw new Error('Failed to download image');
+                    }
+
+                    const blob = await response.blob();
+                    const url = URL.createObjectURL(blob);
+
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `colouraid-${label}.png`;
+
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+
+                    URL.revokeObjectURL(url);
+                } catch (error) {
+                    console.error('Download failed:', error);
+                    alert('Failed to download image.');
+                }
+            };
+
             // Switch to corrected view immediately
             setActiveView('corrected');
 
@@ -934,7 +989,7 @@ document.addEventListener('DOMContentLoaded', () => {
             console.warn("Fallback to client-side processing due to error:", error);
             processingStatus.textContent = "(Server error. Client fallback...)";
             setTimeout(() => { processingStatus.textContent = ''; }, 2000);
-            
+
             // Fallback to client-side processing
             processImageModes();
         }
@@ -943,30 +998,30 @@ document.addEventListener('DOMContentLoaded', () => {
     // Full Daltonization Pipeline using LMS cone color space (Client-side fallback)
     const processImageModes = () => {
         processingStatus.textContent = "(Processing image...)";
-        
+
         setTimeout(() => {
             const width = canvas.width;
             const height = canvas.height;
             const profile = JSON.parse(localStorage.getItem('colouraid_profile'));
             const type = profile ? profile.type : 'protan'; // Default fallback
-            
+
             simulatedImageData = new ImageData(new Uint8ClampedArray(originalImageData.data), width, height);
             correctedImageData = new ImageData(new Uint8ClampedArray(originalImageData.data), width, height);
-            
+
             const simData = simulatedImageData.data;
             const corData = correctedImageData.data;
             const totalPixels = simData.length;
 
             // Matrices for RGB to LMS conversion (Hunt-Pointer-Estevez transformation)
             const rgb2lms = [
-                [ 17.8824, 43.5161,  4.11935],
-                [  3.45565, 27.1554,  3.86714],
-                [  0.02996,  0.18431,  1.46709]
+                [17.8824, 43.5161, 4.11935],
+                [3.45565, 27.1554, 3.86714],
+                [0.02996, 0.18431, 1.46709]
             ];
             const lms2rgb = [
-                [ 0.080944, -0.130504,  0.116721],
-                [-0.0102485,  0.0540193, -0.113615],
-                [-0.0003652, -0.0041216,  0.693511]
+                [0.080944, -0.130504, 0.116721],
+                [-0.0102485, 0.0540193, -0.113615],
+                [-0.0003652, -0.0041216, 0.693511]
             ];
 
             // Simulation Matrices in LMS Space
@@ -1026,19 +1081,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 let b_lin = Math.pow(b / 255.0, 2.2);
 
                 // 1. Convert to LMS
-                let L = rgb2lms[0][0]*r_lin + rgb2lms[0][1]*g_lin + rgb2lms[0][2]*b_lin;
-                let M = rgb2lms[1][0]*r_lin + rgb2lms[1][1]*g_lin + rgb2lms[1][2]*b_lin;
-                let S = rgb2lms[2][0]*r_lin + rgb2lms[2][1]*g_lin + rgb2lms[2][2]*b_lin;
+                let L = rgb2lms[0][0] * r_lin + rgb2lms[0][1] * g_lin + rgb2lms[0][2] * b_lin;
+                let M = rgb2lms[1][0] * r_lin + rgb2lms[1][1] * g_lin + rgb2lms[1][2] * b_lin;
+                let S = rgb2lms[2][0] * r_lin + rgb2lms[2][1] * g_lin + rgb2lms[2][2] * b_lin;
 
                 // 2. Simulate Color Blindness in LMS
-                let L_sim = simulateMatrix[0][0]*L + simulateMatrix[0][1]*M + simulateMatrix[0][2]*S;
-                let M_sim = simulateMatrix[1][0]*L + simulateMatrix[1][1]*M + simulateMatrix[1][2]*S;
-                let S_sim = simulateMatrix[2][0]*L + simulateMatrix[2][1]*M + simulateMatrix[2][2]*S;
+                let L_sim = simulateMatrix[0][0] * L + simulateMatrix[0][1] * M + simulateMatrix[0][2] * S;
+                let M_sim = simulateMatrix[1][0] * L + simulateMatrix[1][1] * M + simulateMatrix[1][2] * S;
+                let S_sim = simulateMatrix[2][0] * L + simulateMatrix[2][1] * M + simulateMatrix[2][2] * S;
 
                 // 3. Convert Simulated LMS back to RGB
-                let sim_r_lin = lms2rgb[0][0]*L_sim + lms2rgb[0][1]*M_sim + lms2rgb[0][2]*S_sim;
-                let sim_g_lin = lms2rgb[1][0]*L_sim + lms2rgb[1][1]*M_sim + lms2rgb[1][2]*S_sim;
-                let sim_b_lin = lms2rgb[2][0]*L_sim + lms2rgb[2][1]*M_sim + lms2rgb[2][2]*S_sim;
+                let sim_r_lin = lms2rgb[0][0] * L_sim + lms2rgb[0][1] * M_sim + lms2rgb[0][2] * S_sim;
+                let sim_g_lin = lms2rgb[1][0] * L_sim + lms2rgb[1][1] * M_sim + lms2rgb[1][2] * S_sim;
+                let sim_b_lin = lms2rgb[2][0] * L_sim + lms2rgb[2][1] * M_sim + lms2rgb[2][2] * S_sim;
 
                 // 4. Calculate Difference (Error) between original and simulated linear RGB
                 let err_r = r_lin - sim_r_lin;
@@ -1046,9 +1101,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 let err_b = b_lin - sim_b_lin;
 
                 // 5. Shift Error to Visible Channels
-                let shift_r = errorCorrectionMatrix[0][0]*err_r + errorCorrectionMatrix[0][1]*err_g + errorCorrectionMatrix[0][2]*err_b;
-                let shift_g = errorCorrectionMatrix[1][0]*err_r + errorCorrectionMatrix[1][1]*err_g + errorCorrectionMatrix[1][2]*err_b;
-                let shift_b = errorCorrectionMatrix[2][0]*err_r + errorCorrectionMatrix[2][1]*err_g + errorCorrectionMatrix[2][2]*err_b;
+                let shift_r = errorCorrectionMatrix[0][0] * err_r + errorCorrectionMatrix[0][1] * err_g + errorCorrectionMatrix[0][2] * err_b;
+                let shift_g = errorCorrectionMatrix[1][0] * err_r + errorCorrectionMatrix[1][1] * err_g + errorCorrectionMatrix[1][2] * err_b;
+                let shift_b = errorCorrectionMatrix[2][0] * err_r + errorCorrectionMatrix[2][1] * err_g + errorCorrectionMatrix[2][2] * err_b;
 
                 // 6. Add Correction to Original RGB
                 let cor_r_lin = r_lin + shift_r;
@@ -1057,19 +1112,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // Re-apply gamma and clamp
                 // Simulation
-                simData[i]     = Math.max(0, Math.min(255, Math.pow(Math.max(0, sim_r_lin), 1 / 2.2) * 255));
+                simData[i] = Math.max(0, Math.min(255, Math.pow(Math.max(0, sim_r_lin), 1 / 2.2) * 255));
                 simData[i + 1] = Math.max(0, Math.min(255, Math.pow(Math.max(0, sim_g_lin), 1 / 2.2) * 255));
                 simData[i + 2] = Math.max(0, Math.min(255, Math.pow(Math.max(0, sim_b_lin), 1 / 2.2) * 255));
-                
+
                 // Correction
-                corData[i]     = Math.max(0, Math.min(255, Math.pow(Math.max(0, cor_r_lin), 1 / 2.2) * 255));
+                corData[i] = Math.max(0, Math.min(255, Math.pow(Math.max(0, cor_r_lin), 1 / 2.2) * 255));
                 corData[i + 1] = Math.max(0, Math.min(255, Math.pow(Math.max(0, cor_g_lin), 1 / 2.2) * 255));
                 corData[i + 2] = Math.max(0, Math.min(255, Math.pow(Math.max(0, cor_b_lin), 1 / 2.2) * 255));
             }
-            
+
             processingStatus.textContent = "(Processing complete)";
             setTimeout(() => { processingStatus.textContent = ''; }, 2000);
-            
+
             // Switch to corrected view immediately upon processing completion
             setActiveView('corrected');
 
