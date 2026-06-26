@@ -67,8 +67,19 @@ const fetchIshiharaAssessmentById = async (id) => {
   };
 };
 
+const deleteIshiharaAssessmentById = async (id) => {
+  const result = await db.run(
+    `DELETE FROM ishihara_assessments
+     WHERE id = ?;`,
+    id
+  );
+
+  return result.changes > 0;
+};
+
 export default {
   insertIshiharaAssessment,
   fetchAllIshiharaAssessments,
   fetchIshiharaAssessmentById,
+  deleteIshiharaAssessmentById,
 };

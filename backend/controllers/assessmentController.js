@@ -55,7 +55,7 @@ const getIshiharaAssessmentById = async (req, res, next) => {
     if (!assessment) {
       const errorResponse = {
         success: false,
-        message: MESSAGES.NOT_FOUND,
+        message: MESSAGES.ASSESSMENT_NOT_FOUND,
         data: null,
         status: HTTP_STATUS.NOT_FOUND,
       };
@@ -64,8 +64,33 @@ const getIshiharaAssessmentById = async (req, res, next) => {
 
     return apiResponse(res, {
       success: true,
-      message: MESSAGES.ASSESSMENT_FETCHED || MESSAGES.ASSESSMENTS_FETCHED,
+      message: MESSAGES.ASSESSMENT_FETCHED,
       data: assessment,
+      status: HTTP_STATUS.OK,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const deleteIshiharaAssessmentById = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const deleted = await assessmentService.deleteIshiharaAssessmentById(id);
+
+    if (!deleted) {
+      return apiResponse(res, {
+        success: false,
+        message: MESSAGES.ASSESSMENT_NOT_FOUND,
+        data: null,
+        status: HTTP_STATUS.NOT_FOUND,
+      });
+    }
+
+    return apiResponse(res, {
+      success: true,
+      message: MESSAGES.ASSESSMENT_DELETED,
+      data: null,
       status: HTTP_STATUS.OK,
     });
   } catch (error) {
@@ -77,4 +102,5 @@ export default {
   createIshiharaAssessment,
   getAllIshiharaAssessments,
   getIshiharaAssessmentById,
+  deleteIshiharaAssessmentById,
 };

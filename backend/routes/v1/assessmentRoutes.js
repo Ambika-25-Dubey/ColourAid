@@ -6,6 +6,7 @@ const router = express.Router();
 router.post("/assessments/ishihara", assessmentController.createIshiharaAssessment);
 router.get("/assessments", assessmentController.getAllIshiharaAssessments);
 router.get("/assessments/:id", assessmentController.getIshiharaAssessmentById);
+router.delete("/assessments/:id", assessmentController.deleteIshiharaAssessmentById);
 
 // 👇 Temporary debug
 console.log("Assessment Router Stack:");

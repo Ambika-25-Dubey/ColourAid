@@ -5,6 +5,8 @@ const MESSAGES = {
   ASSESSMENT_CREATED: "Ishihara assessment saved successfully.",
   ASSESSMENTS_FETCHED: "Ishihara assessments retrieved successfully.",
   ASSESSMENT_FETCHED: "Ishihara assessment retrieved successfully.",
+  ASSESSMENT_DELETED: "Ishihara assessment deleted successfully.",
+  ASSESSMENT_NOT_FOUND: "Assessment not found.",
 };
 
 export default MESSAGES;

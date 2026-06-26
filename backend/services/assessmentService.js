@@ -23,8 +23,14 @@ const getIshiharaAssessmentById = async (id) => {
   return assessment;
 };
 
+const deleteIshiharaAssessmentById = async (id) => {
+  const deleted = await assessmentModel.deleteIshiharaAssessmentById(id);
+  return deleted;
+};
+
 export default {
   saveIshiharaAssessment,
   getAllIshiharaAssessments,
   getIshiharaAssessmentById,
+  deleteIshiharaAssessmentById,
 };
