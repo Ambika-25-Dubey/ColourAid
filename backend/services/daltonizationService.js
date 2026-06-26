@@ -1,9 +1,11 @@
 import sharp from "sharp";
 import path from "path";
 import { promises as fs } from "fs";
+import { fileURLToPath } from "url";
 
-const originalDirectory = path.resolve("./backend/storage/original");
-const processedDirectory = path.resolve("./backend/storage/processed");
+const baseDirectory = path.dirname(fileURLToPath(import.meta.url));
+const originalDirectory = path.resolve(baseDirectory, "../storage/original");
+const processedDirectory = path.resolve(baseDirectory, "../storage/processed");
 
 const ensureDirectories = async () => {
   await fs.mkdir(originalDirectory, { recursive: true });

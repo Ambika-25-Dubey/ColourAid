@@ -2,10 +2,12 @@ import express from "express";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+import { fileURLToPath } from "url";
 import imageController from "../../controllers/imageController.js";
 
 const router = express.Router();
-const uploadDir = path.resolve("./backend/storage/uploads");
+const baseDirectory = path.dirname(fileURLToPath(import.meta.url));
+const uploadDir = path.resolve(baseDirectory, "../../storage/uploads");
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -38,5 +40,6 @@ const upload = multer({
 });
 
 router.post("/images/upload", upload.single("image"), imageController.uploadImage);
+router.get("/images/:filename", imageController.serveImage);
 
 export default router;

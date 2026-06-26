@@ -2,10 +2,12 @@ import express from "express";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+import { fileURLToPath } from "url";
 import imageProcessingController from "../../controllers/imageProcessingController.js";
 
 const router = express.Router();
-const processDir = path.resolve("./backend/storage/processed");
+const baseDirectory = path.dirname(fileURLToPath(import.meta.url));
+const processDir = path.resolve(baseDirectory, "../../storage/processed");
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
